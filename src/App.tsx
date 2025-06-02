@@ -338,7 +338,17 @@ function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight }: an
 function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,onClose:()=>void,onRemove:()=>void,mode:'light'|'dark',winnerColor:string}){
   React.useEffect(() => {
     startConfetti();
-    return stopConfetti;
+
+    // Play celebration sound
+    const audio = new Audio('/celebration.mp3');
+    audio.play().catch(err => console.log('Audio playback failed:', err));
+
+    return () => {
+      stopConfetti();
+      // Cleanup audio
+      audio.pause();
+      audio.currentTime = 0;
+    };
   }, []);
 
   // Modal style tweaks
