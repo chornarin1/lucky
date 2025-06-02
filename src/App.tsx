@@ -380,9 +380,9 @@ function startConfetti(){
   const w = window.innerWidth, h = window.innerHeight;
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) return; // Early return if context is null
+  
   const num = 120;
-  // Each confetti is {x, y, r, c, vx, vy, a}
   const COLORS = ['#ffd700','#ff6347','#00bfff','#e9b116','#d11729','#66c67d','#fff','#b674ea'];
   let conf = Array.from({length:num}).map(()=>({
     x:Math.random()*w,
@@ -393,14 +393,23 @@ function startConfetti(){
     vy:Math.random()*3+1,
     a:Math.random()*3.14
   }));
-  function loop(){
-    ctx.clearRect(0,0,w,h);
+
+  // Create a closure to capture non-null ctx
+  function loop() {
+    // TypeScript now knows ctx is not null inside this closure
+    ctx!.clearRect(0,0,w,h);
     for(let i=0;i<conf.length;i++){
       let c=conf[i];
-      ctx.save();
-      ctx.globalAlpha=0.9;ctx.fillStyle=c.c;
-      ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,6.29);ctx.fill();ctx.restore();
-      c.x+=c.vx;c.y+=c.vy;c.a+=0.05;
+      ctx!.save();
+      ctx!.globalAlpha=0.9;
+      ctx!.fillStyle=c.c;
+      ctx!.beginPath();
+      ctx!.arc(c.x,c.y,c.r,0,6.29);
+      ctx!.fill();
+      ctx!.restore();
+      c.x+=c.vx;
+      c.y+=c.vy;
+      c.a+=0.05;
       if(c.y>h) c.y=-(c.r+4),c.x=Math.random()*w;
     }
     window.confettiAnimationId=requestAnimationFrame(loop);
