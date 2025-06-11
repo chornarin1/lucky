@@ -14,9 +14,9 @@ const MENU_ICON = [
   { label: "More" },
 ];
 const PALETTE = [
-  "#2d6a91", "#66c67d", "#e9b116", "#d11729", "#cad0d2", "#e19dae", "#e5d19f", "#9ba2a7"
+  "#2d6a91", "#66c67d", "#e9b116", "#d11729", "#0c1cad", "#1cad0c", "#e5d19f", "#066f80", "#4f3e3e"
 ];
-const DEFAULT_ENTRIES = ["Ali","Beatriz","Charles","Diya","Eric","Fatima","Gabriel","Hanna"];
+const DEFAULT_ENTRIES = ["Ali","Beatriz","Charles","Diya","Eric", "Narin"];
 function degToRad(deg:number) { return (deg*Math.PI)/180; }
 function randomInt(min:number,max:number) { return Math.floor(Math.random()*(max-min+1))+min; }
 function describeArc(cx:number,cy:number,r:number,startAngle:number,endAngle:number) {
@@ -55,7 +55,9 @@ export default function App() {
   const [wheelSize, setWheelSize] = React.useState(getWheelSize());
   const [radius, setRadius] = React.useState(getWheelSize()/2 - 20);
   const [center, setCenter] = React.useState(getWheelSize()/2);
-
+  // Add these near the top with other state variables in App component
+  const [baseRotation, setBaseRotation] = useState(0);
+  const rotationAnimRef = useRef<number | null>(null);
   React.useEffect(() => {
     function handleResize() {
       const newSize = getWheelSize();
@@ -73,32 +75,43 @@ export default function App() {
 
   function handleSpin() {
     if (spinning || numSegments === 0) return;
+
+    // Cancel base rotation during spin
+    if (rotationAnimRef.current) {
+      cancelAnimationFrame(rotationAnimRef.current);
+    }
     setSpinning(true);
     setWinner(null);
     setShowPopup(false);
     const fullSpins = randomInt(4, 6) * 360;
     const targetSegment = randomInt(0, numSegments - 1);
     const targetDeg = 360 - (targetSegment * anglePer + anglePer/2);
-    const finalRotation = fullSpins + targetDeg;
+    const finalRotation = fullSpins + targetDeg; // Account for base rotation
+
     let start = performance.now();
-    const duration = 3500; // ms
-    const initialRotation = rotation % 360;
-    const delta = (finalRotation - initialRotation + 720) % 360 + fullSpins;
+    const duration = 3500;
+    const initialRotation = rotation;
+    const delta = finalRotation;
     function animateWheel(now: number) {
       const elapsed = now - start;
       const p = Math.min(elapsed / duration, 1);
       const ease = 1 - Math.pow(1 - p, 3);
       setRotation(initialRotation + ease * delta);
+      
       if (p < 1) {
         animRef.current = requestAnimationFrame(animateWheel);
       } else {
         setSpinning(false);
-        setWinner(entries[targetSegment]);
+        // Calculate the actual winner based on final rotation
+        const finalAngle = (initialRotation + delta) % 360;
+        const winningIndex = Math.floor((360 - (finalAngle % 360)) / anglePer) % numSegments;
+        setWinner(entries[winningIndex]);
         setShowPopup(true);
-        setResults(r => [entries[targetSegment], ...r]);
+        setResults(r => [entries[winningIndex], ...r]);
       }
     }
     animRef.current = requestAnimationFrame(animateWheel);
+
   }
   function handleEntriesChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInputText(e.target.value);
@@ -117,8 +130,24 @@ export default function App() {
     setMode(mode === 'light' ? 'dark' : 'light');
     document.body.classList.toggle('dark', mode==='light');
   }
-  React.useEffect(() => () => { if (animRef.current != null) cancelAnimationFrame(animRef.current); }, []);
 
+  // Add this function inside App component, before the return statement
+  function animateBaseRotation(timestamp: number) {
+    setBaseRotation(prev => (prev + 0.3) % 360); // Adjust 0.1 for speed
+    rotationAnimRef.current = requestAnimationFrame(animateBaseRotation);
+  }
+  React.useEffect(() => () => { if (animRef.current != null) cancelAnimationFrame(animRef.current); }, []);
+  // Add this useEffect to handle the continuous rotation
+  React.useEffect(() => {
+    if (!spinning) {
+      rotationAnimRef.current = requestAnimationFrame(animateBaseRotation);
+    }
+    return () => {
+      if (rotationAnimRef.current) {
+        cancelAnimationFrame(rotationAnimRef.current);
+      }
+    };
+  }, [spinning]);
   return (
     <div className={`${mode==='dark'? 'bg-[#15181c] text-white' : 'bg-white'} min-h-screen flex flex-col`} style={{ fontFamily: "'Quicksand', Arial, sans-serif" }}>
       {/* App Bar */}
@@ -158,7 +187,10 @@ export default function App() {
               width={wheelSize}
               height={wheelSize}
               viewBox={`0 0 ${wheelSize} ${wheelSize}`}
-              style={{ transition: spinning ? undefined : "transform 0.2s", transform: `rotate(${rotation}deg)` }}
+              style={{ 
+                transition: spinning ? undefined : "transform 0.3s cubic-bezier(0.2, 0, 0.3, 1)", 
+                transform: `rotate(${rotation + (spinning ? 0 : baseRotation)}deg)` 
+              }}
             >
               {entries.length === 0 ? (
                 <circle cx={center} cy={center} r={radius} fill="#eee" />
@@ -295,7 +327,7 @@ export default function App() {
           onClose={handleClosePopup}
           onRemove={handleRemoveWinner}
           mode={mode}
-          winnerColor={PALETTE[entries.indexOf(winner)%PALETTE.length]}
+          winnerColor={PALETTE[entries.findIndex(entry => entry === winner) % PALETTE.length]}
         />
       )}
       <footer className="mt-8 mb-3 text-center text-xs text-gray-500">
@@ -360,7 +392,15 @@ function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,o
       <canvas id="confetti-canvas" className="fixed inset-0 z-[49] pointer-events-none" style={{width:'100vw',height:'100vh'}} />
       <div
         className="z-[51] rounded-lg shadow-2xl border"
-        style={{ minWidth:360, maxWidth:480, background: cardBg, borderColor, boxShadow:'0 6px 32px #000a', borderWidth:1, padding:0, position:'relative'}}
+        style={{ 
+          minWidth:480, 
+          maxWidth:600, 
+          background: cardBg, 
+          borderColor, 
+          boxShadow:'0 6px 32px #000a', 
+          borderWidth:1, 
+          padding:0, 
+          position:'relative'}}
       >
         {/* Winner segment color header! */}
         <div className="rounded-t-lg flex items-center justify-between px-6 py-3 text-white text-lg font-bold"
