@@ -227,6 +227,7 @@ export default function App() {
                           cx={center}
                           cy={center}
                           highlight={winner === name}
+                          wheelSize={wheelSize}
                         />
                       </g>
                     </g>
@@ -346,28 +347,55 @@ export default function App() {
   );
 }
 
-function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight }: any) {
-  const angle = (startAngle + endAngle) / 2;
-  const rad = degToRad(angle);
-  const x = cx + (radius - Math.max(40, radius * 0.22)) * Math.cos(rad);
-  const y = cy + (radius - Math.max(40, radius * 0.22)) * Math.sin(rad);
-  // Text always radial, upright
-  let textRotate = angle - 90;
-  if (angle > 90 && angle < 270) {
+function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, wheelSize }: any) {
+  const midAngle = (startAngle + endAngle) / 2;
+  const rad = degToRad(midAngle);
+  
+  // Better text positioning - closer to the edge but with proper spacing
+  const textRadius = radius * 0.75; // Position text at 75% of radius
+  const x = cx + textRadius * Math.cos(rad);
+  const y = cy + textRadius * Math.sin(rad);
+  
+  // Improved text rotation logic
+  let textRotate = midAngle;
+  
+  // Keep text readable - flip if it would be upside down
+  if (midAngle > 90 && midAngle < 270) {
     textRotate += 180;
   }
-  const fontSize = Math.max(18, radius * 0.12);
+  
+  // Dynamic font size based on wheel size and segment count
+  const segmentCount = 360 / (endAngle - startAngle);
+  let fontSize = Math.max(12, wheelSize * 0.08);
+  
+  // Adjust font size based on text length and segment size
+  if (text.length > 8) {
+    fontSize *= 0.8;
+  } else if (text.length > 12) {
+    fontSize *= 0.6;
+  }
+  
+  // Smaller font for many segments
+  if (segmentCount > 8) {
+    fontSize *= 0.9;
+  } else if (segmentCount > 12) {
+    fontSize *= 0.8;
+  }
+
   return (
     <text
       x={x}
       y={y}
       fontSize={fontSize}
-      fontWeight={highlight ? 700 : 500}
+      fontWeight={highlight ? 700 : 600}
       fill={highlight ? '#fff' : '#fff'}
       textAnchor="middle"
       alignmentBaseline="middle"
       transform={`rotate(${textRotate},${x},${y})`}
-      style={{ filter: highlight ? "drop-shadow(0 0 3px #000)" : undefined, textShadow: highlight ? "0 3px 6px #000" : undefined }}
+      style={{ 
+        filter: highlight ? "drop-shadow(0 0 4px #000)" : "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
+        letterSpacing: '0.5px'
+      }}
       pointerEvents="none"
       fontFamily="'Quicksand', Arial, sans-serif"
     >
