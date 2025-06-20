@@ -228,6 +228,7 @@ export default function App() {
                           cy={center}
                           highlight={winner === name}
                           wheelSize={wheelSize}
+                          numSegments={numSegments}
                         />
                       </g>
                     </g>
@@ -347,14 +348,78 @@ export default function App() {
   );
 }
 
-function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, wheelSize }: any) {
+// Helper function to break text into multiple lines if needed
+function breakTextIntoLines(text: string, maxLength: number): string[] {
+  if (text.length <= maxLength) return [text];
+  
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    if ((currentLine + ' ' + word).trim().length <= maxLength) {
+      currentLine = (currentLine + ' ' + word).trim();
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  
+  if (currentLine) lines.push(currentLine);
+  
+  // If still too long, break by characters
+  if (lines.some(line => line.length > maxLength)) {
+    const result: string[] = [];
+    for (const line of lines) {
+      if (line.length <= maxLength) {
+        result.push(line);
+      } else {
+        // Break long words by characters
+        for (let i = 0; i < line.length; i += maxLength) {
+          result.push(line.slice(i, i + maxLength));
+        }
+      }
+    }
+    return result;
+  }
+  
+  return lines;
+}
+
+function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, wheelSize, numSegments }: any) {
   const midAngle = (startAngle + endAngle) / 2;
   const rad = degToRad(midAngle);
+  const segmentAngle = endAngle - startAngle;
   
-  // Better text positioning - closer to the edge but with proper spacing
-  const textRadius = radius * 0.75; // Position text at 75% of radius
-  const x = cx + textRadius * Math.cos(rad);
-  const y = cy + textRadius * Math.sin(rad);
+  // Calculate available space for text
+  const textRadius = radius * 0.7; // Position text at 70% of radius for more space
+  const availableArcLength = (segmentAngle * Math.PI * textRadius) / 180;
+  
+  // Dynamic font size calculation
+  let baseFontSize = Math.max(10, wheelSize * 0.06);
+  
+  // Adjust font size based on number of segments
+  if (numSegments > 6) baseFontSize *= 0.9;
+  if (numSegments > 10) baseFontSize *= 0.8;
+  if (numSegments > 15) baseFontSize *= 0.7;
+  
+  // Calculate max characters that can fit in the arc
+  const avgCharWidth = baseFontSize * 0.6; // Approximate character width
+  const maxCharsPerLine = Math.floor(availableArcLength / avgCharWidth);
+  
+  // Break text into lines if necessary
+  const maxLineLength = Math.max(4, maxCharsPerLine - 1); // Ensure minimum readability
+  const textLines = breakTextIntoLines(text, maxLineLength);
+  
+  // Adjust font size if we have multiple lines
+  let fontSize = baseFontSize;
+  if (textLines.length > 1) {
+    fontSize *= 0.85; // Smaller font for multi-line text
+  }
+  
+  // Further reduce font size for very long text
+  if (text.length > 12) fontSize *= 0.9;
+  if (text.length > 18) fontSize *= 0.8;
   
   // Improved text rotation logic
   let textRotate = midAngle;
@@ -364,45 +429,44 @@ function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, whee
     textRotate += 180;
   }
   
-  // Dynamic font size based on wheel size and segment count
-  const segmentCount = 360 / (endAngle - startAngle);
-  let fontSize = Math.max(12, wheelSize * 0.08);
+  // Calculate positions for multiple lines
+  const lineHeight = fontSize * 1.1;
+  const totalHeight = (textLines.length - 1) * lineHeight;
   
-  // Adjust font size based on text length and segment size
-  if (text.length > 8) {
-    fontSize *= 0.8;
-  } else if (text.length > 12) {
-    fontSize *= 0.6;
-  }
-  
-  // Smaller font for many segments
-  if (segmentCount > 8) {
-    fontSize *= 0.9;
-  } else if (segmentCount > 12) {
-    fontSize *= 0.8;
-  }
-
   return (
-    <text
-      x={x}
-      y={y}
-      fontSize={fontSize}
-      fontWeight={highlight ? 700 : 600}
-      fill={highlight ? '#fff' : '#fff'}
-      textAnchor="middle"
-      alignmentBaseline="middle"
-      transform={`rotate(${textRotate},${x},${y})`}
-      style={{ 
-        filter: highlight ? "drop-shadow(0 0 4px #000)" : "drop-shadow(0 1px 2px rgba(0,0,0,0.3))",
-        letterSpacing: '0.5px'
-      }}
-      pointerEvents="none"
-      fontFamily="'Quicksand', Arial, sans-serif"
-    >
-      {text}
-    </text>
+    <g>
+      {textLines.map((line, index) => {
+        // Adjust radius for each line to create proper spacing
+        const lineRadius = textRadius + (index - (textLines.length - 1) / 2) * (lineHeight / 2);
+        const x = cx + lineRadius * Math.cos(rad);
+        const y = cy + lineRadius * Math.sin(rad);
+        
+        return (
+          <text
+            key={index}
+            x={x}
+            y={y}
+            fontSize={fontSize}
+            fontWeight={highlight ? 700 : 600}
+            fill={highlight ? '#fff' : '#fff'}
+            textAnchor="middle"
+            alignmentBaseline="middle"
+            transform={`rotate(${textRotate},${x},${y})`}
+            style={{ 
+              filter: highlight ? "drop-shadow(0 0 4px #000)" : "drop-shadow(0 1px 2px rgba(0,0,0,0.4))",
+              letterSpacing: '0.3px'
+            }}
+            pointerEvents="none"
+            fontFamily="'Quicksand', Arial, sans-serif"
+          >
+            {line}
+          </text>
+        );
+      })}
+    </g>
   );
 }
+
 /** Winner Popup Modal & Firework/Confetti Canvas */
 function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,onClose:()=>void,onRemove:()=>void,mode:'light'|'dark',winnerColor:string}){
   React.useEffect(() => {
