@@ -1,5 +1,6 @@
+"use client";
+
 import React, { useState, useRef } from "react";
-import "./index.css";
 
 const NAV_COLOR = "#2d6a91";
 const NAV_COLOR_DARK = "#193864";
@@ -17,6 +18,7 @@ const PALETTE = [
   "#2d6a91", "#66c67d", "#e9b116", "#d11729", "#0c1cad", "#1cad0c", "#e5d19f", "#066f80", "#4f3e3e"
 ];
 const DEFAULT_ENTRIES = ["Ali","Beatriz","Charles","Diya","Eric", "Narin"];
+
 function degToRad(deg:number) { return (deg*Math.PI)/180; }
 function randomInt(min:number,max:number) { return Math.floor(Math.random()*(max-min+1))+min; }
 function describeArc(cx:number,cy:number,r:number,startAngle:number,endAngle:number) {
@@ -41,7 +43,7 @@ const getWheelSize = () => {
   return 400;
 };
 
-export default function App() {
+export default function Home() {
   const [entries, setEntries] = useState(DEFAULT_ENTRIES);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -55,9 +57,9 @@ export default function App() {
   const [wheelSize, setWheelSize] = React.useState(getWheelSize());
   const [radius, setRadius] = React.useState(getWheelSize()/2 - 20);
   const [center, setCenter] = React.useState(getWheelSize()/2);
-  // Add these near the top with other state variables in App component
   const [baseRotation, setBaseRotation] = useState(0);
   const rotationAnimRef = useRef<number | null>(null);
+
   React.useEffect(() => {
     function handleResize() {
       const newSize = getWheelSize();
@@ -69,14 +71,12 @@ export default function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // --- Wheel math ---
   const numSegments = entries.length;
   const anglePer = 360 / (numSegments || 1);
 
   function handleSpin() {
     if (spinning || numSegments === 0) return;
 
-    // Cancel base rotation during spin
     if (rotationAnimRef.current) {
       cancelAnimationFrame(rotationAnimRef.current);
     }
@@ -86,7 +86,7 @@ export default function App() {
     const fullSpins = randomInt(4, 6) * 360;
     const targetSegment = randomInt(0, numSegments - 1);
     const targetDeg = 360 - (targetSegment * anglePer + anglePer/2);
-    const finalRotation = fullSpins + targetDeg; // Account for base rotation
+    const finalRotation = fullSpins + targetDeg;
 
     let start = performance.now();
     const duration = 3500;
@@ -102,7 +102,6 @@ export default function App() {
         animRef.current = requestAnimationFrame(animateWheel);
       } else {
         setSpinning(false);
-        // Calculate the actual winner based on final rotation
         const finalAngle = (initialRotation + delta) % 360;
         const winningIndex = Math.floor((360 - (finalAngle % 360)) / anglePer) % numSegments;
         setWinner(entries[winningIndex]);
@@ -111,42 +110,40 @@ export default function App() {
       }
     }
     animRef.current = requestAnimationFrame(animateWheel);
-
   }
+
   function handleEntriesChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInputText(e.target.value);
     const parsed = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
     setEntries(parsed);
   }
+
   function handleClosePopup() {
     setShowPopup(false);
   }
+
   function handleRemoveWinner() {
     if (winner) {
-      // Remove winner from entries array
       const updatedEntries = entries.filter((name) => name !== winner);
       setEntries(updatedEntries);
-      
-      // Update the textarea input text to reflect the change
       setInputText(updatedEntries.join("\n"));
-      
-      // Close popup and clear winner
       setShowPopup(false);
       setWinner(null);
     }
   }
+
   function handleSwitchMode() {
     setMode(mode === 'light' ? 'dark' : 'light');
     document.body.classList.toggle('dark', mode==='light');
   }
 
-  // Add this function inside App component, before the return statement
   function animateBaseRotation(timestamp: number) {
-    setBaseRotation(prev => (prev + 0.3) % 360); // Adjust 0.1 for speed
+    setBaseRotation(prev => (prev + 0.3) % 360);
     rotationAnimRef.current = requestAnimationFrame(animateBaseRotation);
   }
+
   React.useEffect(() => () => { if (animRef.current != null) cancelAnimationFrame(animRef.current); }, []);
-  // Add this useEffect to handle the continuous rotation
+
   React.useEffect(() => {
     if (!spinning) {
       rotationAnimRef.current = requestAnimationFrame(animateBaseRotation);
@@ -157,8 +154,9 @@ export default function App() {
       }
     };
   }, [spinning]);
+
   return (
-    <div className={`${mode==='dark'? 'bg-[#15181c] text-white' : 'bg-white'} min-h-screen flex flex-col`} style={{ fontFamily: "'Quicksand', Arial, sans-serif" }}>
+    <div className={`${mode==='dark'? 'bg-[#15181c] text-white' : 'bg-white'} min-h-screen flex flex-col`}>
       {/* App Bar */}
       <nav
         style={{ background: mode==='dark'? NAV_COLOR_DARK : NAV_COLOR }}
@@ -174,7 +172,6 @@ export default function App() {
           </button>
         ))}
         <div className="flex-1" />
-        {/* Theme Switcher */}
         <button className="mr-2 bg-white/20 hover:bg-[#335d8c]/60 rounded p-2" title="Switch theme" onClick={handleSwitchMode}>
           {mode === 'dark' ? '☀️' : '🌙'}
         </button>
@@ -182,11 +179,11 @@ export default function App() {
           English
         </button>
       </nav>
+
       {/* Main Layout */}
       <div className="flex-1 flex flex-row px-4 pt-5 gap-5" style={{background:mode==='dark'?"#15181c":"#fbfbfb"}}>
         {/* Wheel Area */}
         <div className="flex flex-1 flex-col items-center justify-start min-w-[320px]">
-          {/* Interactive spinning wheel */}
           <div
             className="relative flex items-center justify-center cursor-pointer"
             style={{ width: wheelSize, height: wheelSize }}
@@ -217,7 +214,6 @@ export default function App() {
                         opacity={winner === name ? 1 : 0.96}
                         style={winner === name ? { filter: "drop-shadow(0 0 8px #222)" } : {}}
                       />
-                      {/* Name text in arc */}
                       <g>
                         <TextOnArc
                           text={name}
@@ -237,13 +233,11 @@ export default function App() {
               )}
               <circle cx={center} cy={center} r={Math.max(60, wheelSize/7)} fill="#fff" stroke="#eee" />
             </svg>
-            {/* Center "Tap to spin" */}
             <div className="absolute top-1/2 left-1/2 select-none pointer-events-none" style={{ transform: "translate(-50%, -50%)" }}>
               <div className={`rounded-full flex items-center justify-center text-xl font-bold transition-all duration-200 ${spinning ? "opacity-40" : "opacity-100"}`} style={{ color: spinning ? "#222" : (mode==='dark' ? '#222' : NAV_COLOR) }}>
                 {winner ? winner : (entries.length === 0 ? "No entries" : "Tap to spin")}
               </div>
             </div>
-            {/* Arrow pointer */}
             <div
               style={{
                 left: wheelSize - Math.max(34, wheelSize * 0.055),
@@ -258,6 +252,7 @@ export default function App() {
             {spinning && (<div className="absolute inset-0 bg-white bg-opacity-0 cursor-wait" />)}
           </div>
         </div>
+
         {/* Entries/Results Panel */}
         <div className={`w-[325px] rounded-lg shadow px-3 py-4 min-h-[360px] mt-2 flex flex-col gap-2 border ${mode==='dark'? 'bg-[#212328] border-[#222]' : 'bg-white'}`}>
           <div className="flex items-center justify-between mb-3">
@@ -277,7 +272,6 @@ export default function App() {
                 ${mode==='dark'? 'text-black' : 'text-gray-800'}
               `}
               onClick={() => {
-                // Shuffle entries array
                 const arr = [...entries];
                 for (let i = arr.length - 1; i > 0; i--) {
                   const j = Math.floor(Math.random() * (i + 1));
@@ -293,7 +287,6 @@ export default function App() {
                 mode === 'dark' ? 'text-black' : 'text-gray-800'
               }`}
               onClick={() => {
-                // Sort entries A-Z
                 const arr = [...entries].sort((a, b) => a.localeCompare(b));
                 setEntries(arr);
                 setInputText(arr.join("\n"));
@@ -318,7 +311,6 @@ export default function App() {
             onChange={handleEntriesChange}
           />
           <div className="text-xs text-gray-500 pt-2">Version 347 <span className="ml-1 bg-blue-100 px-1 py-0.5 text-blue-700 rounded">New!</span> <a href="#" className="ml-2 text-blue-600">Changelog</a></div>
-          {/* Results List */}
           {results.length > 0 && (
             <div className="text-sm mt-3 pt-2 border-t">
               <b>Winners:</b>
@@ -331,6 +323,7 @@ export default function App() {
           )}
         </div>
       </div>
+
       {/* Winner Popup Modal and Firework */}
       {showPopup && winner && (
         <WinnerModal
@@ -348,7 +341,6 @@ export default function App() {
   );
 }
 
-// Helper function to break text into multiple lines if needed
 function breakTextIntoLines(text: string, maxLength: number): string[] {
   if (text.length <= maxLength) return [text];
   
@@ -367,14 +359,12 @@ function breakTextIntoLines(text: string, maxLength: number): string[] {
   
   if (currentLine) lines.push(currentLine);
   
-  // If still too long, break by characters
   if (lines.some(line => line.length > maxLength)) {
     const result: string[] = [];
     for (const line of lines) {
       if (line.length <= maxLength) {
         result.push(line);
       } else {
-        // Break long words by characters
         for (let i = 0; i < line.length; i += maxLength) {
           result.push(line.slice(i, i + maxLength));
         }
@@ -391,52 +381,40 @@ function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, whee
   const rad = degToRad(midAngle);
   const segmentAngle = endAngle - startAngle;
   
-  // Calculate available space for text
-  const textRadius = radius * 0.7; // Position text at 70% of radius for more space
+  const textRadius = radius * 0.7;
   const availableArcLength = (segmentAngle * Math.PI * textRadius) / 180;
   
-  // Dynamic font size calculation
   let baseFontSize = Math.max(10, wheelSize * 0.06);
   
-  // Adjust font size based on number of segments
   if (numSegments > 6) baseFontSize *= 0.9;
   if (numSegments > 10) baseFontSize *= 0.8;
   if (numSegments > 15) baseFontSize *= 0.7;
   
-  // Calculate max characters that can fit in the arc
-  const avgCharWidth = baseFontSize * 0.6; // Approximate character width
+  const avgCharWidth = baseFontSize * 0.6;
   const maxCharsPerLine = Math.floor(availableArcLength / avgCharWidth);
   
-  // Break text into lines if necessary
-  const maxLineLength = Math.max(4, maxCharsPerLine - 1); // Ensure minimum readability
+  const maxLineLength = Math.max(4, maxCharsPerLine - 1);
   const textLines = breakTextIntoLines(text, maxLineLength);
   
-  // Adjust font size if we have multiple lines
   let fontSize = baseFontSize;
   if (textLines.length > 1) {
-    fontSize *= 0.85; // Smaller font for multi-line text
+    fontSize *= 0.85;
   }
   
-  // Further reduce font size for very long text
   if (text.length > 12) fontSize *= 0.9;
   if (text.length > 18) fontSize *= 0.8;
   
-  // Improved text rotation logic
   let textRotate = midAngle;
   
-  // Keep text readable - flip if it would be upside down
   if (midAngle > 90 && midAngle < 270) {
     textRotate += 180;
   }
   
-  // Calculate positions for multiple lines
   const lineHeight = fontSize * 1.1;
-  const totalHeight = (textLines.length - 1) * lineHeight;
-  
+
   return (
     <g>
       {textLines.map((line, index) => {
-        // Adjust radius for each line to create proper spacing
         const lineRadius = textRadius + (index - (textLines.length - 1) / 2) * (lineHeight / 2);
         const x = cx + lineRadius * Math.cos(rad);
         const y = cy + lineRadius * Math.sin(rad);
@@ -457,7 +435,6 @@ function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, whee
               letterSpacing: '0.3px'
             }}
             pointerEvents="none"
-            fontFamily="'Quicksand', Arial, sans-serif"
           >
             {line}
           </text>
@@ -467,29 +444,24 @@ function TextOnArc({ text, startAngle, endAngle, radius, cx, cy, highlight, whee
   );
 }
 
-/** Winner Popup Modal & Firework/Confetti Canvas */
 function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,onClose:()=>void,onRemove:()=>void,mode:'light'|'dark',winnerColor:string}){
   React.useEffect(() => {
     startConfetti();
 
-    // Play celebration sound
     const audio = new Audio('/celebration.mp3');
     audio.play().catch(err => console.log('Audio playback failed:', err));
 
     return () => {
       stopConfetti();
-      // Cleanup audio
       audio.pause();
       audio.currentTime = 0;
     };
   }, []);
 
-  // Modal style tweaks
   const cardBg = mode==='dark'? '#202226' : '#222';
   const borderColor = mode==='dark'? '#283346' : '#d1d5db';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.50)'}}>
-      {/* Confetti canvas always behind modal */}
       <canvas id="confetti-canvas" className="fixed inset-0 z-[49] pointer-events-none" style={{width:'100vw',height:'100vh'}} />
       <div
         className="z-[51] rounded-lg shadow-2xl border"
@@ -503,7 +475,6 @@ function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,o
           padding:0, 
           position:'relative'}}
       >
-        {/* Winner segment color header! */}
         <div className="rounded-t-lg flex items-center justify-between px-6 py-3 text-white text-lg font-bold"
           style={{background:winnerColor}}>
           <span>We have a winner!</span>
@@ -523,15 +494,14 @@ function WinnerModal({winner,onClose,onRemove,mode,winnerColor}:{winner:string,o
   );
 }
 
-// Firework/confetti effect
 function startConfetti(){
-  if (window.confettiAnimationId) return;
+  if ((window as any).confettiAnimationId) return;
   const canvas = document.getElementById('confetti-canvas') as HTMLCanvasElement;
   if (!canvas) return;
   const w = window.innerWidth, h = window.innerHeight;
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return; // Early return if context is null
+  if (!ctx) return;
   
   const num = 120;
   const COLORS = ['#ffd700','#ff6347','#00bfff','#e9b116','#d11729','#66c67d','#fff','#b674ea'];
@@ -545,9 +515,7 @@ function startConfetti(){
     a:Math.random()*3.14
   }));
 
-  // Create a closure to capture non-null ctx
   function loop() {
-    // TypeScript now knows ctx is not null inside this closure
     ctx!.clearRect(0,0,w,h);
     for(let i=0;i<conf.length;i++){
       let c=conf[i];
@@ -563,17 +531,16 @@ function startConfetti(){
       c.a+=0.05;
       if(c.y>h) c.y=-(c.r+4),c.x=Math.random()*w;
     }
-    window.confettiAnimationId=requestAnimationFrame(loop);
+    (window as any).confettiAnimationId=requestAnimationFrame(loop);
   }
   loop();
 }
+
 function stopConfetti(){
-  if(window.confettiAnimationId){
-    cancelAnimationFrame(window.confettiAnimationId);
-    window.confettiAnimationId=null;
+  if((window as any).confettiAnimationId){
+    cancelAnimationFrame((window as any).confettiAnimationId);
+    (window as any).confettiAnimationId=null;
   }
   const canvas = document.getElementById('confetti-canvas') as HTMLCanvasElement;
   if(canvas) {const c=canvas.getContext('2d');c&&c.clearRect(0,0,canvas.width,canvas.height);}
 }
-// @ts-ignore
-declare global { interface Window { confettiAnimationId?: number|null; } }
