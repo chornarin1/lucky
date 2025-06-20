@@ -122,9 +122,18 @@ export default function App() {
     setShowPopup(false);
   }
   function handleRemoveWinner() {
-    setEntries(entries.filter((name) => name!==winner));
-    setShowPopup(false);
-    setWinner(null);
+    if (winner) {
+      // Remove winner from entries array
+      const updatedEntries = entries.filter((name) => name !== winner);
+      setEntries(updatedEntries);
+      
+      // Update the textarea input text to reflect the change
+      setInputText(updatedEntries.join("\n"));
+      
+      // Close popup and clear winner
+      setShowPopup(false);
+      setWinner(null);
+    }
   }
   function handleSwitchMode() {
     setMode(mode === 'light' ? 'dark' : 'light');
